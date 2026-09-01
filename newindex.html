@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Required</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111;color:#fff;font-family:Arial,sans-serif}
+    .box{width:min(90vw,360px);padding:28px;box-sizing:border-box;text-align:center;background:#222;border-radius:12px}
+    input,button{width:100%;box-sizing:border-box;padding:12px;margin-top:10px;border-radius:6px;border:1px solid #555;font-size:16px}
+    button{cursor:pointer}
+    #message{min-height:20px;margin-top:12px;color:#ff5555}
+  </style>
+</head>
+<body>
+  <main class="box">
+    <h1>Website</h1>
+    <p>Enter the password to continue.</p>
+    <form id="loginForm">
+      <input id="password" type="password" autocomplete="off" required>
+      <button type="submit">Continue</button>
+    </form>
+    <div id="message"></div>
+  </main>
+  <script>
+    const PASSWORD_HASH = "01a7180ebb1df5625ba41bd96826c0e830781e6fea248c2042721031a8c63628";
+    const AUTH_KEY = "website_authenticated";
+    const FAILED_ATTEMPTS_KEY = "website_failed_attempts";
+    const MAX_FAILED_ATTEMPTS = 3;
+
+    async function sha256(text) {
+      const data = new TextEncoder().encode(text);
+      const digest = await crypto.subtle.digest("SHA-256", data);
+      return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const passwordInput = document.getElementById("password");
+      const message = document.getElementById("message");
+      const hash = await sha256(passwordInput.value);
+
+      if (hash === PASSWORD_HASH) {
+        sessionStorage.removeItem(FAILED_ATTEMPTS_KEY);
+        sessionStorage.setItem(AUTH_KEY, "true");
+        window.location.replace("game.html");
+        return;
+      }
+
+      const attempts = Number(sessionStorage.getItem(FAILED_ATTEMPTS_KEY) || "0") + 1;
+      sessionStorage.setItem(FAILED_ATTEMPTS_KEY, String(attempts));
+      passwordInput.value = "";
+
+      if (attempts >= MAX_FAILED_ATTEMPTS) {
+        sessionStorage.removeItem(AUTH_KEY);
+        window.location.replace("doom.html");
+        return;
+      }
+
+      const remaining = MAX_FAILED_ATTEMPTS - attempts;
+      message.textContent = `Incorrect password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining.`;
+      passwordInput.focus();
+    });
+  </script>
+</body>
+</html>
